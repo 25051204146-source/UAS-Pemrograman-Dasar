@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <iomanip>  // Tambahkan header ini untuk setw
 
 using namespace std;
 
@@ -15,19 +16,20 @@ struct mahasiswa {
 };
 
 void hitung_rata_dan_grade(mahasiswa* mhs){
-mhs->rata=(mhs->nilai_tugas+mhs->nilai_uts+mhs->nilai_uas)/3;
-    if(mhs->rata>=86){
-        mhs->grade='A';
-    }else if(mhs->rata>=71){
-        mhs->grade='B';
-    }else if(mhs->rata>=56){
-        mhs->grade='C';
-    }else if(mhs->rata>=41){
-        mhs->grade='D';
+    mhs->rata = (mhs->nilai_tugas + mhs->nilai_uts + mhs->nilai_uas) / 3;
+    if(mhs->rata >= 86){
+        mhs->grade = 'A';
+    }else if(mhs->rata >= 71){
+        mhs->grade = 'B';
+    }else if(mhs->rata >= 56){
+        mhs->grade = 'C';
+    }else if(mhs->rata >= 41){
+        mhs->grade = 'D';
     }else{
-        mhs->grade='E';
+        mhs->grade = 'E';
     }
 }
+
 void input_mahasiswa(mahasiswa* mhs_daftar, int& jumlah) {
     if (jumlah >= 100) {
         cout << "Sistem sudah penuh!" << endl;
@@ -49,19 +51,35 @@ void input_mahasiswa(mahasiswa* mhs_daftar, int& jumlah) {
     jumlah++;
     cout << "Data berhasil ditambahkan!\n";
 }
+
 void tampilkan_mahasiswa(mahasiswa* mhs_daftar, int jumlah) {
     if (jumlah == 0) {
         cout << "Tidak Ada Data Mahasiswa di Dalam Sistem!" << endl;
         return;
     }
     cout << "\n=== Daftar Mahasiswa ===\n";
+    // Header tabel dengan kolom tambahan untuk nilai-nilai
+    cout << left << setw(5) << "No." 
+         << setw(20) << "Nama" 
+         << setw(10) << "NIM" 
+         << setw(10) << "Tugas" 
+         << setw(10) << "UTS" 
+         << setw(10) << "UAS" 
+         << setw(15) << "Rata-rata" 
+         << setw(5) << "Grade" << endl;
+    cout << string(85, '-') << endl;  // Garis pemisah yang lebih panjang
     for (int i = 0; i < jumlah; i++) {
-        cout << i + 1 << ". " << mhs_daftar[i].nama 
-             << " | NIM: " << mhs_daftar[i].nim
-             << " | Rata-rata Nilai: " << mhs_daftar[i].rata
-             << " | Grade: " << mhs_daftar[i].grade << endl;
+        cout << left << setw(5) << (i + 1) 
+             << setw(20) << mhs_daftar[i].nama 
+             << setw(10) << mhs_daftar[i].nim 
+             << setw(10) << fixed << setprecision(2) << mhs_daftar[i].nilai_tugas 
+             << setw(10) << fixed << setprecision(2) << mhs_daftar[i].nilai_uts 
+             << setw(10) << fixed << setprecision(2) << mhs_daftar[i].nilai_uas 
+             << setw(15) << fixed << setprecision(2) << mhs_daftar[i].rata 
+             << setw(5) << mhs_daftar[i].grade << endl;
     }
 }
+
 void edit_mahasiswa(mahasiswa* mhs_daftar, int jumlah) {
     if (jumlah == 0) {
         cout << "Tidak ada data!" << endl;
@@ -89,18 +107,25 @@ void edit_mahasiswa(mahasiswa* mhs_daftar, int jumlah) {
     hitung_rata_dan_grade(mhs);
     cout << "Data berhasil diedit!\n";
 }
+
 void simpan_ke_file(mahasiswa* mhs_daftar, int jumlah) {
     ofstream file("data_mahasiswa.txt");
+    if (jumlah == 0) {
+        file << "Tidak ada data mahasiswa.\n";
+        file.close();
+        cout << "Data berhasil disimpan!\n";
+        return;
+    }
+    // Header kolom
+    file << left << setw(5) << "No." << " | " << setw(20) << "Nama" << endl;
+    file << string(30, '-') << endl;  // Garis pemisah
     for (int i = 0; i < jumlah; i++) {
-        file << mhs_daftar[i].nama << endl;
-        file << mhs_daftar[i].nim << endl;
-        file << mhs_daftar[i].nilai_tugas << endl;
-        file << mhs_daftar[i].nilai_uts << endl;
-        file << mhs_daftar[i].nilai_uas << endl;
+        file << left << setw(5) << (i + 1) << " | " << setw(20) << mhs_daftar[i].nama << endl;
     }
     file.close();
     cout << "Data berhasil disimpan!\n";
 }
+
 void muat_dari_file(mahasiswa* mhs_daftar, int& jumlah) {
     ifstream file("data_mahasiswa.txt");
     if (!file.is_open()) {
@@ -108,21 +133,34 @@ void muat_dari_file(mahasiswa* mhs_daftar, int& jumlah) {
         return;
     }
     jumlah = 0;
-    while (!file.eof()) {
-        mahasiswa* mhs = &mhs_daftar[jumlah];
-        getline(file, mhs->nama);
-        if (mhs->nama == "") break; 
-        file >> mhs->nim;
-        file >> mhs->nilai_tugas;
-        file >> mhs->nilai_uts;
-        file >> mhs->nilai_uas;
-        file.ignore();
-        hitung_rata_dan_grade(mhs);
-        jumlah++;
+    string line;
+    // Lewati header dan garis pemisah
+    getline(file, line);  // Header
+    getline(file, line);  // Garis pemisah
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        // Parse line: "No. | Nama"
+        size_t pos = line.find(" | ");
+        if (pos != string::npos) {
+            string no_str = line.substr(0, pos);
+            string nama = line.substr(pos + 3);
+            // Hapus spasi di akhir nama jika ada
+            nama.erase(nama.find_last_not_of(" \t") + 1);
+            mahasiswa* mhs = &mhs_daftar[jumlah];
+            mhs->nama = nama;
+            // Karena file baru hanya nama, set nilai default atau biarkan kosong
+            mhs->nim = 0;  // Default
+            mhs->nilai_tugas = 0.0;
+            mhs->nilai_uts = 0.0;
+            mhs->nilai_uas = 0.0;
+            hitung_rata_dan_grade(mhs);
+            jumlah++;
+        }
     }
     file.close();
     cout << "Data berhasil dimuat!\n";
 }
+
 int main() {
     mahasiswa daftar[100];
     int jumlah = 0;
